@@ -1,6 +1,7 @@
 import fitz  # PyMuPDF
 import cv2
 import numpy as np
+import csv
 
 class Point:
     def __init__(self, x, y, color):
@@ -35,9 +36,9 @@ class MapProcessor:
         # Bildgröße in Pixeln
         img_height, img_width, _ = image.shape
 
-        # Berechne das Verhältnis zwischen Bildpixeln und realen Einheiten (mm)
-        x_ratio = 2350 / img_width  # Breite der Karte in mm (235 cm)
-        y_ratio = 1150 / img_height  # Höhe der Karte in mm (115 cm)
+        # Berechne das Verhältnis zwischen Bildpixeln und realen Einheiten (cm)
+        x_ratio = self.map_width / img_width  # Breite der Karte in cm
+        y_ratio = self.map_height / img_height  # Höhe der Karte in cm
 
         # Rasterisiere die Karte
         for y in range(0, img_height, self.grid_size):
@@ -48,13 +49,13 @@ class MapProcessor:
 
                 # Hole die Farbe des Pixels
                 b, g, r = image[rounded_y, rounded_x]
-                color = (r, g, b)  # Farbe im RGB-Format
+                color = (r, g, b)  # Speichere die Farbe als Tupel
 
-                # Berechne die realen Koordinaten in mm
+                # Berechne die realen Koordinaten in cm
                 real_x = rounded_x * x_ratio
                 real_y = rounded_y * y_ratio
 
-                # Erstelle ein Point-Objekt und füge es zur Liste hinzu
+                # Erstelle ein Point-Objekt
                 point = Point(real_x, real_y, color)
                 self.points.append(point)
 
@@ -68,6 +69,18 @@ class MapProcessor:
             if point.x == x and point.y == y:
                 return point
         return None
+
+    def save_points_to_csv(self, output_path):
+        """
+        Speichert die Punkte in einer CSV-Datei.
+        :param output_path: Pfad zur Ausgabedatei.
+        """
+        with open(output_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["x", "y", "r", "g", "b"])  # Header
+            for point in self.points:
+                r, g, b = point.color
+                writer.writerow([point.x, point.y, r, g, b])
 
 # Funktion zum Rendern der PDF-Seite als Bild
 def render_pdf_to_image(pdf_path, output_image_path, dpi=300):
@@ -105,7 +118,7 @@ map_width = 2350  # Breite der Karte in mm (235 cm)
 map_height = 1150  # Höhe der Karte in mm (115 cm)
 
 # Dynamische Berechnung des grid_size basierend auf der kurzen Seite
-desired_points_short_side = 200  # Gewünschte Anzahl von Punkten auf der kurzen Seite
+desired_points_short_side = 400  # Erhöhe die Anzahl der Punkte auf der kurzen Seite
 image = cv2.imread(output_image_path)
 if image is None:
     raise FileNotFoundError("Das Bild konnte nicht geladen werden.")
@@ -117,7 +130,7 @@ image = crop_white_border(image)
 img_height, img_width, _ = image.shape
 grid_size = max(1, img_height // desired_points_short_side)  # Rastergröße in Pixeln
 
-processor = MapProcessor(output_image_path, map_width, map_height, grid_size)
+processor = MapProcessor(output_image_path, 235, 115, grid_size)  # Map-Größe in cm
 processor.process_map()
 
 # Debugging: Überprüfe die Bildgröße und Rastergröße
@@ -159,9 +172,7 @@ if punkt:
 else:
     print(f"Kein Punkt an Koordinate ({x}, {y}) gefunden.")
 
-# Speichere die Punkte in einer Datei
-output_data_path = r".\ressources\points_data.txt"
-with open(output_data_path, "w") as file:
-    for point in processor.points:
-        file.write(f"{point}\n")
+# Speichere die Punkte in einer CSV-Datei
+output_data_path = r".\ressources\points_data.csv"
+processor.save_points_to_csv(output_data_path)
 print(f"Punkte wurden in {output_data_path} gespeichert.")
