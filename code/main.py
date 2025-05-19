@@ -1,5 +1,5 @@
 import fitz  # PyMuPDF
-import cv2 # OpenCV
+import cv2 
 import csv # CSV
 
 class Point:
@@ -98,23 +98,26 @@ def crop_white_border(image, threshold=240):    # Funktion zum Zuschneiden des w
     coords = cv2.findNonZero(binary)  # Finde nicht-weiße Pixel
     x, y, w, h = cv2.boundingRect(coords)  # Berechne das begrenzende Rechteck
     cropped_image = image[y:y+h, x:x+w]  # Schneide das Bild zu
-    cv2.imwrite("cropped_image.png", cropped_image)  # Speichere das zugeschnittene Bild
+    cv2.imwrite(r".\ressources\cropped_map.png", cropped_image)  # Speichere das zugeschnittene Bild
     return cropped_image
 
 #----------------------------------------------------------------------------------------------------------------------------------#
 #----------------------------------------------------------------------------------------------------------------------------------#
 
-# Beispielaufruf
+# Vars
 pdf_path = r".\ressources\map.pdf"
 output_image_path = r".\ressources\map.png"
+
+# Extrahieren
 render_pdf_to_image(pdf_path, output_image_path, dpi=300)
 
+# Debug
 image = cv2.imread(output_image_path)
 if image is None:
     raise FileNotFoundError("Das Bild konnte nicht geladen werden.")
 
 # Entferne den weißen Rand
-image = crop_white_border(image) #!
+image = crop_white_border(image)
 
 """
 # Aktualisiere die Bildgröße nach dem Zuschneiden
