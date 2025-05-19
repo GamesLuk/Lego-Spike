@@ -4,11 +4,12 @@ import numpy as np
 import csv
 
 class Point:
-    def __init__(self, x, y, color):
+    def __init__(self, x, y, color, object):
         self.x = x  # X-Koordinate (in mm)
         self.y = y  # Y-Koordinate (in mm)
         self.color = color  # Farbe (RGB)
-        self.attributes = {}  # Zusätzliche Attribute
+        self.object = object  # Flag, ob es sich um ein Objekt handelt
+        self.attributes = {}  # Zusätzliche Attribute als Dictionary
 
     def set_attribute(self, key, value):
         self.attributes[key] = value
@@ -20,10 +21,8 @@ class Point:
         return f"Point(x={self.x}, y={self.y}, color={self.color}, attributes={self.attributes})"
 
 class MapProcessor:
-    def __init__(self, image_path, map_width, map_height, grid_size):
+    def __init__(self, image_path, grid_size):
         self.image_path = image_path
-        self.map_width = map_width  # Breite der Karte in mm
-        self.map_height = map_height  # Höhe der Karte in mm
         self.grid_size = grid_size  # Abstand zwischen den Punkten im Raster (in Pixeln)
         self.points = []  # Liste von Point-Objekten
 
@@ -33,30 +32,31 @@ class MapProcessor:
         if image is None:
             raise FileNotFoundError(f"Bild konnte nicht geladen werden: {self.image_path}")
         
+        # Konvertiere das Bild zu RGB, um Farbveränderungen zu vermeiden
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
         # Bildgröße in Pixeln
         img_height, img_width, _ = image.shape
-
-        # Berechne das Verhältnis zwischen Bildpixeln und realen Einheiten (cm)
-        x_ratio = self.map_width / img_width  # Breite der Karte in cm
-        y_ratio = self.map_height / img_height  # Höhe der Karte in cm
 
         # Rasterisiere die Karte
         for y in range(0, img_height, self.grid_size):
             for x in range(0, img_width, self.grid_size):
                 # Runde die Pixelkoordinaten
-                rounded_x = round(x)
-                rounded_y = round(y)
+                rounded_x = int(round(x, 0) / 34)
+                rounded_y = int(round(y, 0) / 34)
 
                 # Hole die Farbe des Pixels
-                b, g, r = image[rounded_y, rounded_x]
+                r, g, b = image[rounded_y, rounded_x]
                 color = (r, g, b)  # Speichere die Farbe als Tupel
 
-                # Berechne die realen Koordinaten in cm
-                real_x = rounded_x * x_ratio
-                real_y = rounded_y * y_ratio
+                # Object = (229, 0, 109)
+                if color == (229, 0, 109):
+                    object = True
+                else:
+                    object = False
 
                 # Erstelle ein Point-Objekt
-                point = Point(real_x, real_y, color)
+                point = Point(rounded_x, rounded_y, color, object)
                 self.points.append(point)
 
     def get_points_by_color(self, target_color):
@@ -77,10 +77,10 @@ class MapProcessor:
         """
         with open(output_path, mode='w', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(["x", "y", "r", "g", "b"])  # Header
+            writer.writerow(["x", "y", "r", "g", "b", "object"])  # Header
             for point in self.points:
                 r, g, b = point.color
-                writer.writerow([point.x, point.y, r, g, b])
+                writer.writerow([point.x, point.y, r, g, b, point.object, point.attributes])  # Schreibe die Punktdaten
 
 # Funktion zum Rendern der PDF-Seite als Bild
 def render_pdf_to_image(pdf_path, output_image_path, dpi=300):
@@ -94,6 +94,12 @@ def render_pdf_to_image(pdf_path, output_image_path, dpi=300):
     print(f"Seite als Bild gespeichert: {output_image_path}")
     doc.close()
 
+    # Konvertiere das gespeicherte Bild zu RGB, um Farbveränderungen zu vermeiden
+    image = cv2.imread(output_image_path)
+    if image is not None:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        cv2.imwrite(output_image_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))  # Speichere es erneut in RGB
+
 def crop_white_border(image, threshold=240):
     """
     Entfernt den weißen Rand eines Bildes basierend auf einem Helligkeitsschwellenwert.
@@ -106,16 +112,13 @@ def crop_white_border(image, threshold=240):
     coords = cv2.findNonZero(binary)  # Finde nicht-weiße Pixel
     x, y, w, h = cv2.boundingRect(coords)  # Berechne das begrenzende Rechteck
     cropped_image = image[y:y+h, x:x+w]  # Schneide das Bild zu
+    cv2.imwrite("cropped_image.png", cropped_image)  # Speichere das zugeschnittene Bild
     return cropped_image
 
 # Beispielaufruf
 pdf_path = r".\ressources\map.pdf"
 output_image_path = r".\ressources\map.png"
 render_pdf_to_image(pdf_path, output_image_path, dpi=300)
-
-# Verarbeite die Karte
-map_width = 2350  # Breite der Karte in mm (235 cm)
-map_height = 1150  # Höhe der Karte in mm (115 cm)
 
 # Dynamische Berechnung des grid_size basierend auf der kurzen Seite
 desired_points_short_side = 400  # Erhöhe die Anzahl der Punkte auf der kurzen Seite
@@ -124,13 +127,13 @@ if image is None:
     raise FileNotFoundError("Das Bild konnte nicht geladen werden.")
 
 # Entferne den weißen Rand
-image = crop_white_border(image)
+image = crop_white_border(image) #!
 
 # Aktualisiere die Bildgröße nach dem Zuschneiden
 img_height, img_width, _ = image.shape
 grid_size = max(1, img_height // desired_points_short_side)  # Rastergröße in Pixeln
 
-processor = MapProcessor(output_image_path, 235, 115, grid_size)  # Map-Größe in cm
+processor = MapProcessor(output_image_path, grid_size)  # Map-Größe in cm
 processor.process_map()
 
 # Debugging: Überprüfe die Bildgröße und Rastergröße
