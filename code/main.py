@@ -98,15 +98,15 @@ def crop_white_border(image, threshold=240):    # Funktion zum Zuschneiden des w
     coords = cv2.findNonZero(binary)  # Finde nicht-weiße Pixel
     x, y, w, h = cv2.boundingRect(coords)  # Berechne das begrenzende Rechteck
     cropped_image = image[y:y+h, x:x+w]  # Schneide das Bild zu
-    cv2.imwrite(r".\ressources\cropped_map.png", cropped_image)  # Speichere das zugeschnittene Bild
+    cv2.imwrite("./ressources/cropped_map.png", cropped_image)  # Speichere das zugeschnittene Bild
     return cropped_image
 
 #----------------------------------------------------------------------------------------------------------------------------------#
 #----------------------------------------------------------------------------------------------------------------------------------#
 
 # Vars
-pdf_path = r".\ressources\map.pdf"
-output_image_path = r".\ressources\map.png"
+pdf_path = "./ressources/map.pdf"
+output_image_path = "./ressources/map.png"
 
 # Extrahieren
 render_pdf_to_image(pdf_path, output_image_path, dpi=300)
@@ -127,7 +127,7 @@ processor = MapProcessor(output_image_path, grid_size)  # Map-Größe in cm
 processor.process_map()
 
 # Speichere die Punkte in einer CSV-Datei
-output_data_path = r".\ressources\points_data.csv"
+output_data_path = r"./ressources/points_data.csv"
 processor.save_points_to_csv(output_data_path)
 print(f"Punkte wurden in {output_data_path} gespeichert.")
 
