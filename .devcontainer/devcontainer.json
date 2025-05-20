@@ -11,7 +11,9 @@
 	"features": {
 		"ghcr.io/devcontainers/features/git-lfs:1": {},
 		"ghcr.io/devcontainers/features/python:1": {}
-	}
+	},
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/Lego-Spike,type=bind",
+    "workspaceFolder": "/workspaces/Lego-Spike"
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
