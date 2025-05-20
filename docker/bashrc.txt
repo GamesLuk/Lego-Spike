@@ -1,0 +1,7 @@
+
+# Gamesluk´s Settings:
+
+cls() {
+    clear
+    }
+# Clear function

@@ -26,4 +26,6 @@ RUN pip3 uninstall pymupdf fitz -y && \
 
 COPY . .
 
+RUN cat ./docker/bashrc.txt >> ~/.bashrc
+
 CMD [ "bash" ]
