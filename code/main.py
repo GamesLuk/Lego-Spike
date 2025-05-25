@@ -1,6 +1,9 @@
 import fitz  # PyMuPDF
 import cv2 
 import csv # CSV
+from PIL import Image  # Pillow für Bildverarbeitung
+#----------------------------------------------------------------------------------------------------------------------------------#
+#----------------------------------------------------------------------------------------------------------------------------------#
 
 class Point:
     def __init__(self, x, y, color, object):
@@ -23,12 +26,15 @@ class Point:
 #----------------------------------------------------------------------------------------------------------------------------------#
 
 class MapProcessor:
-    def __init__(self, image_path, grid_size):
+    def __init__(self, image_path, image_width, image_height):
         self.image_path = image_path
-        self.grid_size = grid_size  # Abstand zwischen den Punkten im Raster (in Pixeln)
+        self.image_width = image_width
+        self.image_height = image_height
         self.points = []  # Liste von Point-Objekten
 
     def process_map(self):
+
+        """
         # Lade das Bild
         image = cv2.imread(self.image_path)
         if image is None:
@@ -39,6 +45,40 @@ class MapProcessor:
 
         # Bildgröße in Pixeln
         img_height, img_width, _ = image.shape
+
+        """
+#
+#   
+
+        Image.MAX_IMAGE_PIXELS = None  # Deaktiviert das Sicherheitslimit
+
+        image_path = self.image_path
+        image_width = self.image_width
+        image_height = self.image_height
+
+        image = Image.open(image_path) # Lade das Bild mit Pillow
+        image_width_real, image_height_real = image.size # Hole die reale Größe des Bildes
+
+
+        if image_width is None: # Wenn die Breite None ist, berechne sie basierend auf der Höhe
+            image_width = int(round(image_width_real / (image_height_real/image_height),0)) # Berechne die Breite basierend auf der Höhe
+            print(f"Image width was None, calculated width: {image_width} (real: {image_width_real}, percentage: {image_height_real/image_height})")
+
+        elif image_height is None: # Wenn die Höhe None ist, berechne sie basierend auf der Breite
+            image_height = int(round(image_height_real / (image_width_real/image_width),0)) # Berechne die Höhe basierend auf der Breite
+            print(f"Image height was None, calculated height: {image_height} (real: {image_height_real}, percentage: {image_width_real/image_width})")
+
+
+        image = image.resize((image_width, image_height), Image.NEAREST)  # Skaliere das Bild auf die gewünschte Größe ohne Antialiasing
+        image.save(image_path.replace(".png", "_scaled.png"))  # Speichere das skalierte Bild
+
+
+
+
+#
+#
+
+        """
 
         # Rasterisiere die Karte
         for y in range(0, img_height, self.grid_size):
@@ -79,6 +119,8 @@ class MapProcessor:
             for point in self.points:
                 r, g, b = point.color
                 writer.writerow([point.x, point.y, r, g, b, point.object, point.attributes])  # Schreibe die Punktdaten
+    
+    """
 
 #----------------------------------------------------------------------------------------------------------------------------------#
 #----------------------------------------------------------------------------------------------------------------------------------#
@@ -109,7 +151,7 @@ pdf_path = "./ressources/map.pdf"
 output_image_path = "./ressources/map.png"
 
 # Extrahieren
-render_pdf_to_image(pdf_path, output_image_path, dpi=300)
+render_pdf_to_image(pdf_path, output_image_path, dpi=100)
 
 # Debug
 image = cv2.imread(output_image_path)
@@ -118,6 +160,9 @@ if image is None:
 
 # Entferne den weißen Rand
 image = crop_white_border(image)
+
+processor = MapProcessor(image_path=output_image_path, image_width=None, image_height=200)
+processor.process_map()
 
 """
 # Aktualisiere die Bildgröße nach dem Zuschneiden

@@ -21,7 +21,7 @@ RUN if [ -f requirements.txt ]; then pip3 install --upgrade pip && pip3 install 
 
 #Install missing dependencies
 RUN pip3 uninstall pymupdf fitz -y && \
-    pip3 install --no-cache-dir pymupdf && \
+    pip3 install --no-cache-dir pymupdf pillow && \
     apt-get update && apt-get install -y libgl1 nano make
 
 COPY . .
